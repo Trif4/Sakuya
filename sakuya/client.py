@@ -19,3 +19,5 @@ prefixes = (variant(p + ', ') for p in (
 )
 
 client = Bot(command_prefix=prefixes, help_command=None)
+
+client.load_extension('hi')
