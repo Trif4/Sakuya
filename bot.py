@@ -2,7 +2,7 @@ import os
 
 from dotenv import load_dotenv
 
-from .client import client
+from sakuya.client import client
 
 load_dotenv()
 
