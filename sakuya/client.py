@@ -7,7 +7,8 @@ prefixes = [variant(p) for p in (
         'Maid bot',
         'Maid',
         'Knife lady',
-        'Female Dio'
+        'Female Dio',
+        'Girl Dio'
     ) for variant in (
         lambda p: p + ' ',
         lambda p: p + ', ',
@@ -16,6 +17,8 @@ prefixes = [variant(p) for p in (
     )
 ]
 
-client = Bot(command_prefix=prefixes, help_command=None)
+bot = Bot(command_prefix=prefixes, help_command=None)
 
-client.load_extension('sakuya.hi')
+bot.load_extension('sakuya.settings')
+bot.load_extension('sakuya.hi')
+bot.load_extension('sakuya.sentinel')

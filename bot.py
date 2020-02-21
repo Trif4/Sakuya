@@ -2,8 +2,8 @@ import os
 
 from dotenv import load_dotenv
 
-from sakuya.client import client
+from sakuya.client import bot
 
 load_dotenv()
 
-client.run(os.getenv('DISCORD_TOKEN'))
+bot.run(os.getenv('DISCORD_TOKEN'))
