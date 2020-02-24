@@ -1,15 +1,22 @@
+import os
+
 from discord.ext.commands import Bot
 
-prefixes = [variant(p) for p in (
-        '<@!678333318202261548>',  # hardcoded bot mention
-        'Sakuya',
-        'Maid robot',
-        'Maid bot',
-        'Maid',
-        'Knife lady',
-        'Female Dio',
-        'Girl Dio'
-    ) for variant in (
+base_prefixes = [
+    'Sakuya',
+    'Maid robot',
+    'Maid bot',
+    'Maid',
+    'Knife lady',
+    'Female Dio',
+    'Girl Dio'
+]
+
+bot_mention = f"<@!{os.getenv('DISCORD_ID')}>"
+if bot_mention:
+    base_prefixes.append(bot_mention)
+
+prefixes = [variant(p) for p in base_prefixes for variant in (
         lambda p: p + ' ',
         lambda p: p + ', ',
         lambda p: p.lower() + ' ',
