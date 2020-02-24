@@ -52,7 +52,7 @@ class Sentinel(commands.Cog):
         state = self.guilds.get(member.guild)
         if state:
             # Guild has sentinel enabled
-            now = datetime.now()
+            now = datetime.utcnow()
             account_age = now - member.created_at
             if account_age.days < SUSPICIOUS_ACCOUNT_AGE_LIMIT_DAYS:
                 # Update state
@@ -64,7 +64,11 @@ class Sentinel(commands.Cog):
 
                 # Alert
                 if state.recent_alerts <= 3:
-                    msg = f'Suspicious user {member.mention} joined the server (account {account_age.days} days old).'
+                    days = account_age.days
+                    hours = int(account_age.seconds / 60 / 60)
+                    minutes = account_age.seconds // 60 % 60
+                    age_string = f'{days}d {hours}h {minutes}m'
+                    msg = f'Suspicious user {member.mention} joined the server (account age: {age_string}).'
                     if state.recent_alerts == 3:
                         msg += "\nI believe we are being raided. I will silence further alerts until things have been "
                         msg += f"calm for {ALERT_RESET_MINUTES} minutes."
