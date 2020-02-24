@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import Dict
 
-from discord import Guild, TextChannel, Member
+from discord import Guild, TextChannel, Member, Forbidden
 from discord.ext import commands
 from discord.ext.commands import Bot
 
@@ -41,9 +41,12 @@ class Sentinel(commands.Cog):
             if guild:
                 channel = guild.get_channel(g.sentinel_channel_id)
                 if channel:
-                    self.guilds[guild] = GuildState(guild=guild, alert_channel=channel)
+                    if channel.permissions_for(guild.me).send_messages:
+                        self.guilds[guild] = GuildState(guild=guild, alert_channel=channel)
+                    else:
+                        print(f"Missing permissions for alert channel in {guild.name}! Sentinel disabled in guild.")
                 else:
-                    print(f"Alert channel doesn't exist in {guild.name}! Sentinel disabled.")
+                    print(f"Alert channel doesn't exist in {guild.name}! Sentinel disabled in guild.")
             else:
                 print(f"Guild {g.id} not found during Sentinel init.")
 
@@ -72,10 +75,16 @@ class Sentinel(commands.Cog):
                     if state.recent_alerts == 3:
                         msg += "\nI believe we are being raided. I will silence further alerts until things have been "
                         msg += f"calm for {ALERT_RESET_MINUTES} minutes."
-                    await state.alert_channel.send(msg)
+                    try:
+                        await state.alert_channel.send(msg)
+                    except Forbidden:
+                        print(f'Missing permissions for alert channel in {state.guild.name}! Alert not delivered.')
 
     async def enable(self, ctx, alert_channel: TextChannel = None):
         channel = alert_channel or ctx.channel
+        if not channel.permissions_for(ctx.me).send_messages:
+            await ctx.send("I don't have permission to send messages in that channel.")
+            return
         self.guilds[ctx.guild] = GuildState(guild=ctx.guild, alert_channel=channel)
         g = db.query(_Guild).get(ctx.guild.id) or _Guild(id=ctx.guild.id)
         g.sentinel_channel_id = channel.id
