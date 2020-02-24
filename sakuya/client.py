@@ -1,5 +1,6 @@
 import os
 
+from discord import Activity, ActivityType
 from discord.ext.commands import Bot
 
 base_prefixes = [
@@ -24,7 +25,7 @@ prefixes = [variant(p) for p in base_prefixes for variant in (
     )
 ]
 
-bot = Bot(command_prefix=prefixes, help_command=None)
+bot = Bot(command_prefix=prefixes, help_command=None, activity=Activity(type=ActivityType.watching, name='you'))
 
 bot.load_extension('sakuya.settings')
 bot.load_extension('sakuya.hi')
