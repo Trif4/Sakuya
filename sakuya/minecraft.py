@@ -90,7 +90,7 @@ class Minecraft(commands.Cog):
                         rcon.command(f'whitelist remove {previous_username}')
                     res = rcon.command(f'whitelist add {username}')
                     print(res)
-                    assert ('Added' in res or 'Already' in res)
+                    assert ('Added' in res or 'already whitelisted' in res)
 
                 member.minecraft_username = username
                 db.add(member)
