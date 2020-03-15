@@ -103,7 +103,7 @@ class Minecraft(commands.Cog):
                 msg += random.choice(trust_messages)
                 ctx.send(msg)
 
-            except MCRconException as e:
+            except (MCRconException, ConnectionError) as e:
                 ctx.send("I'm terribly sorry, but I'm unable to do that at the moment. Please try again later.")
                 print(e)
 
