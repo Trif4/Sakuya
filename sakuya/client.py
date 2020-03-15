@@ -30,3 +30,4 @@ bot = Bot(command_prefix=prefixes, help_command=None, activity=Activity(type=Act
 bot.load_extension('sakuya.settings')
 bot.load_extension('sakuya.hi')
 bot.load_extension('sakuya.sentinel')
+bot.load_extension('sakuya.minecraft')
