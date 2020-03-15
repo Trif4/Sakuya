@@ -80,7 +80,8 @@ class Minecraft(commands.Cog):
                 ctx.send(f'Sorry, I only whitelist people with the {state.role.name} role.')
                 return
 
-            member = db.query(_Member).get(ctx.author.id, ctx.guild.id) or _Member(ctx.author.id, ctx.guild.id)
+            member = db.query(_Member).get((ctx.author.id, ctx.guild.id)) or _Member(user_id=ctx.author.id,
+                                                                                     guild_id=ctx.guild.id)
             previous_username = member.minecraft_username
 
             try:
