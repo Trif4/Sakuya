@@ -90,6 +90,7 @@ class Minecraft(commands.Cog):
                         rcon.command(f'whitelist remove {previous_username}')
                     res = rcon.command(f'whitelist add {username}')
                     print(res)
+                    assert ('Added' in res or 'Already' in res)
 
                 member.minecraft_username = username
                 db.add(member)
@@ -103,7 +104,7 @@ class Minecraft(commands.Cog):
                 msg += random.choice(trust_messages)
                 await ctx.send(msg)
 
-            except (MCRconException, ConnectionError) as e:
+            except (MCRconException, ConnectionError, AssertionError) as e:
                 await ctx.send("I'm terribly sorry, but I'm unable to do that at the moment. Please try again later.")
                 print(e)
 
