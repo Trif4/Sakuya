@@ -77,7 +77,7 @@ class Minecraft(commands.Cog):
         state = self.guilds.get(ctx.guild)
         if state and ctx.channel is state.channel:
             if state.role and state.role not in ctx.author.roles:
-                ctx.send(f'Sorry, I only whitelist people with the {state.role.name} role.')
+                await ctx.send(f'Sorry, I only whitelist people with the {state.role.name} role.')
                 return
 
             member = db.query(_Member).get((ctx.author.id, ctx.guild.id)) or _Member(user_id=ctx.author.id,
@@ -101,10 +101,10 @@ class Minecraft(commands.Cog):
                 else:
                     msg = "I have added you to the whitelist. "
                 msg += random.choice(trust_messages)
-                ctx.send(msg)
+                await ctx.send(msg)
 
             except (MCRconException, ConnectionError) as e:
-                ctx.send("I'm terribly sorry, but I'm unable to do that at the moment. Please try again later.")
+                await ctx.send("I'm terribly sorry, but I'm unable to do that at the moment. Please try again later.")
                 print(e)
 
 
