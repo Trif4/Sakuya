@@ -87,8 +87,8 @@ class Minecraft(commands.Cog):
             try:
                 with MCRcon(state.rcon_address, state.rcon_pass) as rcon:
                     if previous_username:
-                        rcon.command(f'/whitelist remove {previous_username}')
-                    res = rcon.command(f'/whitelist add {username}')
+                        rcon.command(f'whitelist remove {previous_username}')
+                    res = rcon.command(f'whitelist add {username}')
                     print(res)
 
                 member.minecraft_username = username
