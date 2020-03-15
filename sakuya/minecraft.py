@@ -2,7 +2,7 @@ from dataclasses import dataclass
 import random
 from typing import Dict
 
-from discord import Guild, TextChannel, Role
+from discord import Guild, TextChannel
 from discord.ext import commands
 from discord.ext.commands import Bot
 from mcrcon import MCRcon, MCRconException
@@ -28,7 +28,6 @@ trust_messages = [
 class GuildState:
     guild: Guild
     channel: TextChannel
-    role: Role
     rcon_address: str
     rcon_pass: str
 
@@ -52,16 +51,11 @@ class Minecraft(commands.Cog):
             guild: Guild = self.bot.get_guild(g.id)
             if guild:
                 channel = guild.get_channel(g.minecraft_channel_id)
-                role = guild.get_role(g.minecraft_role_id)
-                if g.minecraft_role_id and not role:
-                    print(f"Minecraft role doesn't exist in {guild.name}! Module disabled for guild.")
-                    continue
                 if channel:
                     if channel.permissions_for(guild.me).send_messages:
                         self.guilds[guild] = GuildState(
                             guild=guild,
                             channel=channel,
-                            role=role,
                             rcon_address=g.minecraft_rcon_address,
                             rcon_pass=g.minecraft_rcon_pass
                         )
@@ -76,8 +70,8 @@ class Minecraft(commands.Cog):
     async def whitelist(self, ctx, username):
         state = self.guilds.get(ctx.guild)
         if state and ctx.channel is state.channel:
-            if state.role and state.role not in ctx.author.roles:
-                await ctx.send(f'Sorry, I only whitelist people with the {state.role.name} role.')
+            if len(ctx.author.roles) == 0:
+                await ctx.send(f'Sorry, we only just met. Talk to me once you have a role.')
                 return
 
             member = db.query(_Member).get((ctx.author.id, ctx.guild.id)) or _Member(user_id=ctx.author.id,

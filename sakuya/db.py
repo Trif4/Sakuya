@@ -18,7 +18,6 @@ class Guild(db.Model):
     sentinel_channel_id = db.Column(db.Integer)
 
     minecraft_channel_id = db.Column(db.Integer)
-    minecraft_role_id = db.Column(db.Integer)
     minecraft_rcon_address = db.Column(db.Text)
     minecraft_rcon_pass = db.Column(db.Text)
 
