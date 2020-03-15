@@ -17,5 +17,15 @@ class Guild(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     sentinel_channel_id = db.Column(db.Integer)
 
+    minecraft_channel_id = db.Column(db.Integer)
+    minecraft_role_id = db.Column(db.Integer)
+    minecraft_rcon_address = db.Column(db.Text)
+    minecraft_rcon_pass = db.Column(db.Text)
 
-db.create_all()
+    members = db.relationship('Member', backref='guild', cascade='all, delete-orphan')
+
+
+class Member(db.Model):
+    user_id = db.Column(db.Integer, primary_key=True)
+    guild_id = db.Column(db.Integer, db.ForeignKey('guilds.id'), primary_key=True)
+    minecraft_username = db.Column(db.Text)
