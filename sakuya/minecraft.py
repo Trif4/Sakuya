@@ -69,7 +69,7 @@ class Minecraft(commands.Cog):
     @commands.command()
     async def whitelist(self, ctx, username):
         state = self.guilds.get(ctx.guild)
-        if state and ctx.channel is state.channel:
+        if state and ctx.channel == state.channel:
             if len(ctx.author.roles) == 1:
                 # every member has @everyone
                 await ctx.send(f'Sorry, we only just met. Talk to me once you have a role.')
