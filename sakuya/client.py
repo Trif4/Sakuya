@@ -13,9 +13,10 @@ base_prefixes = [
     'Girl Dio'
 ]
 
-bot_mention = f"<@!{os.getenv('DISCORD_ID')}>"
-if bot_mention:
-    base_prefixes.append(bot_mention)
+discord_id = os.getenv('DISCORD_ID')
+if discord_id:
+    base_prefixes.append(f"<@!{os.getenv('DISCORD_ID')}>")
+    base_prefixes.append(f"<@{os.getenv('DISCORD_ID')}>")
 
 prefixes = [variant(p) for p in base_prefixes for variant in (
         lambda p: p + ' ',
