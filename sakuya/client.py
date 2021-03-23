@@ -1,6 +1,6 @@
 import os
 
-from discord import Activity, ActivityType
+from discord import Activity, ActivityType, Intents
 from discord.ext.commands import Bot
 
 base_prefixes = [
@@ -26,7 +26,11 @@ prefixes = [variant(p) for p in base_prefixes for variant in (
     )
 ]
 
-bot = Bot(command_prefix=prefixes, help_command=None, activity=Activity(type=ActivityType.watching, name='you'))
+intents = Intents.default()
+# Required to get member joins for Sentinel
+intents.members = True
+
+bot = Bot(command_prefix=prefixes, intents=intents, help_command=None, activity=Activity(type=ActivityType.watching, name='you'))
 
 bot.load_extension('sakuya.settings')
 bot.load_extension('sakuya.hi')
