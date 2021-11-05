@@ -21,6 +21,8 @@ class Guild(db.Model):
     minecraft_rcon_address = db.Column(db.Text)
     minecraft_rcon_pass = db.Column(db.Text)
 
+    mewo_enabled = db.Column(db.Boolean)
+
     members = db.relationship('Member', backref='guild', cascade='all, delete-orphan')
 
 
@@ -28,3 +30,4 @@ class Member(db.Model):
     user_id = db.Column(db.Integer, primary_key=True)
     guild_id = db.Column(db.Integer, db.ForeignKey('guilds.id'), primary_key=True)
     minecraft_username = db.Column(db.Text)
+    mewo_text = db.Column(db.Text)
