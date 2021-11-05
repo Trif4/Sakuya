@@ -75,8 +75,10 @@ class Mewo(commands.Cog):
                 memberid = ctx.message.mentions[0].id
                 print(mewo_text)
                 mewo_text = str(mewo_text.split(" ",1)[1])
+                pronoun = "their"
             else:
                 memberid = ctx.author.id
+                pronoun = "your"
 
             member = db.query(_Member).get((memberid, ctx.guild.id)) or _Member(user_id=memberid,
                                                                                 guild_id=ctx.guild.id)
@@ -84,12 +86,12 @@ class Mewo(commands.Cog):
 
             try:
                 if mewo_text.lower() == 'none' or mewo_text.lower() == 'clear':
-                    msg = "You don't want a custom mewo anymore? Okay then.."
+                    msg = "No custom mewo anymore? Okay then.."
                     mewo_text = None
                 elif previous_mewo:
-                    msg = "You want to change their mewo? Okay I guess.."
+                    msg = f"You want to change {pronoun} mewo? Okay I guess.."
                 else:
-                    msg = "I have set their mewo response."
+                    msg = f"I have set {pronoun} mewo response."
 
                 member.mewo_text = mewo_text
                 db.add(member)
