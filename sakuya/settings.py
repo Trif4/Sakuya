@@ -18,7 +18,7 @@ class Settings(commands.Cog):
         await self.bot.get_cog('Sentinel').enable(ctx, alert_channel)
 
     @enable.command(name='mewo')
-    @commands.has_guild_permissions(manage_messages=True)
+    @commands.has_guild_permissions(manage_guild=True)
     async def enable_mewo(self, ctx):
         await self.bot.get_cog('Mewo').enable(ctx)
 
@@ -33,7 +33,7 @@ class Settings(commands.Cog):
         await self.bot.get_cog('Sentinel').disable(ctx)
 
     @disable.command(name='mewo')
-    @commands.has_guild_permissions(manage_messages=True)
+    @commands.has_guild_permissions(manage_guild=True)
     async def disable_mewo(self, ctx):
         await self.bot.get_cog('Mewo').disable(ctx)
 

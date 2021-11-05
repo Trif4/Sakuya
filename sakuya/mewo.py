@@ -66,7 +66,7 @@ class Mewo(commands.Cog):
             return
 
     @commands.command()
-    @commands.has_permissions(manage_roles=True)
+    @commands.has_permissions(manage_nicknames=True)
     async def mewoset(self, ctx, *, mewo_text):
         state = self.guilds.get(ctx.guild)
         if state:
