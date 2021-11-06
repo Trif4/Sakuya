@@ -57,10 +57,7 @@ class Mewo(commands.Cog):
             member = db.query(_Member).get((memberid, ctx.guild.id)) or _Member(user_id=memberid,
                                                                                 guild_id=ctx.guild.id)
 
-            if member.mewo_text:
-                msg = member.mewo_text
-            else:
-                msg = random.choice(random_mewo)
+            msg = member.mewo_text or random.choice(random_mewo)
             
             await ctx.send(msg)
             return
@@ -73,7 +70,7 @@ class Mewo(commands.Cog):
 
             if len(ctx.message.mentions) == 1:
                 memberid = ctx.message.mentions[0].id
-                mewo_text = str(mewo_text.split(" ",1)[1])
+                mewo_text = str(mewo_text.split(maxsplit=1)[1])
                 pronoun = "their"
             else:
                 memberid = ctx.author.id
@@ -98,7 +95,7 @@ class Mewo(commands.Cog):
 
                 await ctx.send(msg)
 
-            except (AssertionError) as e:
+            except AssertionError as e:
                 await ctx.send("I'm terribly sorry, but I'm unable to do that at the moment. Please try again later.")
                 print(e)
 
