@@ -108,7 +108,7 @@ class Mewo(commands.Cog):
         g.mewo_enabled = True
         db.add(g)
         db.commit()
-        await ctx.send(f'Mewo responses enabled.')
+        await ctx.send('Mewo responses enabled.')
 
     async def disable(self, ctx):
         del self.guilds[ctx.guild]
