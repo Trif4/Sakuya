@@ -73,7 +73,6 @@ class Mewo(commands.Cog):
 
             if len(ctx.message.mentions) == 1:
                 memberid = ctx.message.mentions[0].id
-                print(mewo_text)
                 mewo_text = str(mewo_text.split(" ",1)[1])
                 pronoun = "their"
             else:
