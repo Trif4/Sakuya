@@ -34,5 +34,6 @@ bot = Bot(command_prefix=prefixes, intents=intents, help_command=None, activity=
 
 bot.load_extension('sakuya.settings')
 bot.load_extension('sakuya.hi')
+bot.load_extension('sakuya.hewo')
 bot.load_extension('sakuya.sentinel')
 bot.load_extension('sakuya.minecraft')
