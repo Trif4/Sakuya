@@ -1,10 +1,9 @@
 from discord import TextChannel
 from discord.ext import commands
-from discord.ext.commands import Bot
 
 
 class Settings(commands.Cog):
-    def __init__(self, bot: Bot):
+    def __init__(self, bot: commands.Bot):
         self.bot = bot
 
     @commands.group()
@@ -28,5 +27,5 @@ class Settings(commands.Cog):
         await self.bot.get_cog('Sentinel').disable(ctx)
 
 
-def setup(bot):
+def setup(bot: commands.Bot):
     bot.add_cog(Settings(bot))

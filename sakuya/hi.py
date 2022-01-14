@@ -7,5 +7,5 @@ async def hi(ctx):
     await ctx.send('Hi, master!')
 
 
-def setup(bot):
+def setup(bot: commands.Bot):
     bot.add_command(hi)

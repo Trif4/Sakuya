@@ -4,7 +4,6 @@ from typing import Dict
 
 from discord import Guild, TextChannel
 from discord.ext import commands
-from discord.ext.commands import Bot
 from mcrcon import MCRcon, MCRconException
 
 from .db import db, Guild as _Guild, Member as _Member
@@ -33,7 +32,7 @@ class GuildState:
 
 
 class Minecraft(commands.Cog):
-    def __init__(self, bot: Bot):
+    def __init__(self, bot: commands.Bot):
         self.bot = bot
         self.guilds: Dict[Guild, GuildState] = dict()
         self.data_loaded = False
@@ -104,5 +103,5 @@ class Minecraft(commands.Cog):
                 print(e)
 
 
-def setup(bot):
+def setup(bot: commands.Bot):
     bot.add_cog(Minecraft(bot))
