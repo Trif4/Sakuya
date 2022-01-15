@@ -103,16 +103,15 @@ class Wordle(commands.Cog):
         guess = guess.lower()
         if state.date != date.today():
             state.word = random.choice(WORD_LIST)
-            state.word = 'horse'
             state.guesses = []
             state.guessers = set()
             state.date = date.today()
         if len(state.guesses) == 6 or (len(state.guesses) and state.guesses[-1] == state.word):
             await ctx.send("Game's over for today. Come play again tomorrow!")
             return
-        # if ctx.author in state.guessers:
-        #     await ctx.send("It's more fun if everyone gets to guess. Please come play again tomorrow, though!")
-        #     return
+        if ctx.author in state.guessers:
+            await ctx.send("It's more fun if everyone gets to guess. Please come play again tomorrow, though!")
+            return
         if guess not in VALID_GUESSES:
             await ctx.send(random.choice(INVALID_GUESS_RESPONSES))
             return
