@@ -2,7 +2,7 @@ import random
 import string
 from collections import Counter
 from dataclasses import dataclass
-from datetime import date, datetime
+from datetime import datetime, time, timedelta
 from typing import Dict
 
 from discord import Guild, TextChannel, Member
@@ -11,6 +11,8 @@ from discord.ext import commands
 from .db import db, Guild as _Guild
 
 
+GAMES_PER_DAY = 3
+GAME_TIMEDELTA = timedelta(minutes=1440/GAMES_PER_DAY)
 INVALID_GUESS_RESPONSES = [
     "I don't know that word, sorry. Try again.",
     "Now you're just making things up.",
@@ -37,6 +39,20 @@ with open('wordle/emoji.txt') as f:
     EMOJI = f.read().splitlines()
 
 
+def current_game_start():
+    midnight = datetime.combine(datetime.utcnow(), time.min)
+    start_times = [midnight + GAME_TIMEDELTA*i for i in range(GAMES_PER_DAY)]
+    return max(st for st in start_times if st <= datetime.utcnow())
+
+
+def time_until_next_game():
+    next_start = current_game_start() + GAME_TIMEDELTA
+    duration = next_start - datetime.utcnow()
+    hours, remainder = divmod(duration.total_seconds(), 3600)
+    minutes = remainder // 60
+    return f'{int(hours)}h{int(minutes):02}m'
+
+
 def emojify_guess(guess, solution):
     letters = Counter(solution)
     result = [0]*5
@@ -56,7 +72,7 @@ class GuildState:
     guild: Guild
     channel: TextChannel
     word: str = None
-    date: date = None
+    game_start: datetime = None
     last_guess_at: datetime = datetime.utcfromtimestamp(0)
     guesses: list[str] = None
     guessers: set[Member] = None
@@ -101,16 +117,16 @@ class Wordle(commands.Cog):
             await ctx.send("Your guess must be 5 letters, a-z only.")
             return
         guess = guess.lower()
-        if state.date != date.today():
+        if state.game_start != current_game_start():
             state.word = random.choice(WORD_LIST)
+            state.game_start = current_game_start()
             state.guesses = []
             state.guessers = set()
-            state.date = date.today()
         if len(state.guesses) == 6 or (len(state.guesses) and state.guesses[-1] == state.word):
-            await ctx.send("Game's over for today. Come play again tomorrow!")
+            await ctx.send(f"I'm preparing for the next game. Come back in {time_until_next_game()}!")
             return
         if ctx.author in state.guessers:
-            await ctx.send("It's more fun if everyone gets to guess. Please come play again tomorrow, though!")
+            await ctx.send("It's more fun if everyone gets to guess. Please come play again later, though!")
             return
         if guess not in VALID_GUESSES:
             await ctx.send(random.choice(INVALID_GUESS_RESPONSES))
@@ -145,10 +161,10 @@ class Wordle(commands.Cog):
                     "You won!",
                     "I was worried I made it too difficult. Good job."
                 ][len(state.guesses)-1]
-                msg += "\nCome play again tomorrow."
+                msg += f"\nNext game will be ready in {time_until_next_game()}."
             case 'lost':
                 msg += f"You lost. The word was **{state.word.upper()}**."
-                msg += "\nTry again tomorrow."
+                msg += f"\nNext game will be ready in {time_until_next_game()}."
             case 'playing':
                 msg += "Available letters:\n"
                 guessed_letters = {letter for guess in state.guesses for letter in guess}
