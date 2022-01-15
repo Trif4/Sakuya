@@ -61,7 +61,7 @@ def emojify_guess(guess, solution):
             letters[letter] -= 1
             result[i] = 2
     for i, letter in enumerate(guess):
-        if letters.get(letter):
+        if solution[i] != letter and letters.get(letter):
             letters[letter] -= 1
             result[i] = 1
     return ''.join(EMOJI[string.ascii_lowercase.index(letter)+26*result[i]] for i, letter in enumerate(guess))
