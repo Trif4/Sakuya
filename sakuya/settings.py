@@ -16,6 +16,11 @@ class Settings(commands.Cog):
     async def enable_sentinel(self, ctx, *, alert_channel: TextChannel = None):
         await self.bot.get_cog('Sentinel').enable(ctx, alert_channel)
 
+    @enable.command(name='wordle')
+    @commands.has_guild_permissions(ban_members=True)
+    async def enable_wordle(self, ctx):
+        await self.bot.get_cog('Wordle').enable(ctx)
+
     @commands.group()
     async def disable(self, ctx):
         if ctx.invoked_subcommand is None:
@@ -25,6 +30,11 @@ class Settings(commands.Cog):
     @commands.has_guild_permissions(ban_members=True)
     async def disable_sentinel(self, ctx):
         await self.bot.get_cog('Sentinel').disable(ctx)
+
+    @disable.command(name='wordle')
+    @commands.has_guild_permissions(ban_members=True)
+    async def disable_wordle(self, ctx):
+        await self.bot.get_cog('Wordle').disable(ctx)
 
 
 def setup(bot: commands.Bot):

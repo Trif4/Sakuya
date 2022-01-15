@@ -21,6 +21,8 @@ class Guild(db.Model):
     minecraft_rcon_address = db.Column(db.Text)
     minecraft_rcon_pass = db.Column(db.Text)
 
+    wordle_channel_id = db.Column(db.Integer)
+
     members = db.relationship('Member', backref='guild', cascade='all, delete-orphan')
 
 
