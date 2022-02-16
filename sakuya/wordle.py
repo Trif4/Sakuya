@@ -1,3 +1,4 @@
+import os
 import random
 import string
 from collections import Counter
@@ -13,6 +14,7 @@ from .db import db, Guild as _Guild
 
 GAMES_PER_DAY = 3
 GAME_TIMEDELTA = timedelta(minutes=1440/GAMES_PER_DAY)
+BONUS_GAME_THRESHOLD = 2
 INVALID_GUESS_RESPONSES = [
     "I don't know that word, sorry. Try again.",
     "Now you're just making things up.",
@@ -107,6 +109,9 @@ class Wordle(commands.Cog):
             else:
                 print(f"Guild {g.id} not found during Wordle init.")
 
+    def reset(self, guild: Guild):
+        self.guilds[guild] = GuildState(guild=guild, channel=self.guilds[guild].channel)
+
     @commands.command()
     async def guess(self, ctx: commands.Context, guess: str):
         state = self.guilds.get(ctx.guild)
@@ -118,14 +123,17 @@ class Wordle(commands.Cog):
             return
         guess = guess.lower()
         if state.game_start != current_game_start():
-            state.word = random.choice(WORD_LIST)
+            if os.getenv('SAKUYA_DEBUG'):
+                state.word = 'debug'
+            else:
+                state.word = random.choice(WORD_LIST)
             state.game_start = current_game_start()
             state.guesses = []
             state.guessers = set()
         if len(state.guesses) == 6 or (len(state.guesses) and state.guesses[-1] == state.word):
             await ctx.send(f"I'm preparing for the next game. Come back in {time_until_next_game()}!")
             return
-        if ctx.author in state.guessers:
+        if ctx.author in state.guessers and not os.getenv('SAKUYA_DEBUG'):
             await ctx.send("It's more fun if everyone gets to guess. Please come play again later, though!")
             return
         if guess not in VALID_GUESSES:
@@ -147,7 +155,8 @@ class Wordle(commands.Cog):
         else:
             game_state = 'playing'
 
-        guess_count_text = 'X' if game_state == 'lost' else str(len(state.guesses))
+        guess_count = len(state.guesses)
+        guess_count_text = 'X' if game_state == 'lost' else str(guess_count)
         msg = f"**Wordle** - {guess_count_text}/6\n"
         msg += "\n".join(emojify_guess(g, state.word) for g in state.guesses)
         msg += "\n\n"
@@ -160,8 +169,12 @@ class Wordle(commands.Cog):
                     "Not bad.",
                     "You won!",
                     "I was worried I made it too difficult. Good job."
-                ][len(state.guesses)-1]
-                msg += f"\nNext game will be ready in {time_until_next_game()}."
+                ][guess_count-1]
+                if guess_count <= BONUS_GAME_THRESHOLD:
+                    msg += "\nCare for an extra round? I've got more time to play since you were so quick."
+                    self.reset(state.guild)
+                else:
+                    msg += f"\nNext game will be ready in {time_until_next_game()}."
             case 'lost':
                 msg += f"You lost. The word was **{state.word.upper()}**."
                 msg += f"\nNext game will be ready in {time_until_next_game()}."
