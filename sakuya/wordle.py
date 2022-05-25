@@ -78,7 +78,12 @@ class GuildState:
     last_guess_at: datetime = datetime.utcfromtimestamp(0)
     guesses: list[str] = None
     guessers: set[Member] = None
-    in_progress: bool = False
+
+    def started(self):
+        return self.word is not None and self.guesses is not None
+
+    def finished(self):
+        return self.started() and len(self.guesses) == 6 or (len(self.guesses) and self.guesses[-1] == self.word)
 
 
 class Wordle(commands.Cog):
@@ -123,9 +128,10 @@ class Wordle(commands.Cog):
             await ctx.send("Your guess must be 5 letters, a-z only.")
             return
         guess = guess.lower()
-        if state.game_start != current_game_start() and state.in_progress:
-            state.in_progress = False
-            await ctx.send(f"Time's up! The word was **{state.word.upper()}**.\nPlease try again.")
+        if state.game_start != current_game_start() and state.started() and not state.finished():
+            last_word = state.word
+            self.reset(state.guild)
+            await ctx.send(f"Time's up! The word was **{last_word.upper()}**.\nPlease try again.")
             return
         if state.game_start != current_game_start():
             if os.getenv('SAKUYA_DEBUG'):
@@ -135,8 +141,7 @@ class Wordle(commands.Cog):
             state.game_start = current_game_start()
             state.guesses = []
             state.guessers = set()
-            state.in_progress = True
-        if len(state.guesses) == 6 or (len(state.guesses) and state.guesses[-1] == state.word):
+        if state.finished():
             await ctx.send(f"I'm preparing for the next game. Come back in {time_until_next_game()}!")
             return
         if ctx.author in state.guessers and not os.getenv('SAKUYA_DEBUG'):
@@ -156,10 +161,8 @@ class Wordle(commands.Cog):
 
         if guess == state.word:
             game_state = 'won'
-            state.in_progress = False
         elif len(state.guesses) == 6:
             game_state = 'lost'
-            state.in_progress = False
         else:
             game_state = 'playing'
 
