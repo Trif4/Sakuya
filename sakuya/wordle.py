@@ -22,12 +22,11 @@ INVALID_GUESS_RESPONSES = [
     "Never heard of it. Try again.",
     "What? Maybe you should try something else.",
     "Is this what commoners say these days..? I'll let you have another try.",
-    "An original guess. Too original. Try again.",
     "Not a valid word. Try again.",
-    "Is that supposed to be some kind of spell? Real words, please.",
+    "Is that supposed to be some kind of spell?",
     "Go to the library if you want to practice spell incantations.",
-    "Bless you.",
-    "No thanks. Try again."
+    "I'm not sure I know what you mean. Try again.",
+    "English only, please."
 ]
 
 
@@ -128,12 +127,13 @@ class Wordle(commands.Cog):
             await ctx.send("Your guess must be 5 letters, a-z only.")
             return
         guess = guess.lower()
-        if state.game_start != current_game_start() and state.started() and not state.finished():
-            last_word = state.word
-            self.reset(state.guild)
-            await ctx.send(f"Time's up! The word was **{last_word.upper()}**.\nPlease try again.")
-            return
         if state.game_start != current_game_start():
+            if state.started() and not state.finished():
+                # Last game wasn't finished before the reset
+                last_word = state.word
+                self.reset(state.guild)
+                await ctx.send(f"Time's up! The word was **{last_word.upper()}**.\nPlease try again.")
+                return
             if os.getenv('SAKUYA_DEBUG'):
                 state.word = 'debug'
             else:
@@ -175,7 +175,7 @@ class Wordle(commands.Cog):
             case 'won':
                 msg += [
                     "...wait, huh? You possess mysterious abilities.",
-                    "Excellent! Your skills of deduction are impressive.",
+                    "Excellent! It seems luck is on your side today.",
                     "Well done!",
                     "Not bad.",
                     "You won!",
