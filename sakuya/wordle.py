@@ -1,5 +1,6 @@
 import os
 import random
+import re
 import string
 from collections import Counter
 from dataclasses import dataclass
@@ -8,6 +9,7 @@ from typing import Dict
 
 from discord import Guild, TextChannel, Member
 from discord.ext import commands
+import emoji
 
 from .db import db, Guild as _Guild
 
@@ -52,6 +54,16 @@ def time_until_next_game():
     hours, remainder = divmod(duration.total_seconds(), 3600)
     minutes = remainder // 60
     return f'{int(hours)}h{int(minutes):02}m'
+
+
+def parse_guess(guess):
+    if not guess:
+        return None
+    # Transform Unicode emoji to text
+    guess = emoji.demojize(guess, delimiters=('', ''))
+    # Transform Discord emoji to text
+    guess = re.sub(r'<.*?:(.*?):.*?>', r'\1', guess)
+    return guess.lower()
 
 
 def emojify_guess(guess, solution):
@@ -123,10 +135,10 @@ class Wordle(commands.Cog):
         if not (state and ctx.channel == state.channel) or (datetime.utcnow() - state.last_guess_at).seconds < 3:
             # Second condition prevents accidental simultaneous guesses by multiple players
             return
-        if not guess or len(guess) != 5 or any(l not in string.ascii_letters for l in guess):
+        guess = parse_guess(guess)
+        if not guess or len(guess) != 5 or any(l not in string.ascii_lowercase for l in guess):
             await ctx.send("Your guess must be 5 letters, a-z only.")
             return
-        guess = guess.lower()
         if state.game_start != current_game_start():
             if state.started() and not state.finished():
                 # Last game wasn't finished before the reset
