@@ -48,59 +48,60 @@ class Minecraft(commands.Cog):
     def load_from_db(self):
         for g in db.query(_Guild).filter(_Guild.minecraft_channel_id.isnot(None)).all():
             guild: Guild = self.bot.get_guild(g.id)
-            if guild:
-                channel = guild.get_channel(g.minecraft_channel_id)
-                if channel:
-                    if channel.permissions_for(guild.me).send_messages:
-                        self.guilds[guild] = GuildState(
-                            guild=guild,
-                            channel=channel,
-                            rcon_address=g.minecraft_rcon_address,
-                            rcon_pass=g.minecraft_rcon_pass
-                        )
-                    else:
-                        print(f"Missing permissions for Minecraft channel in {guild.name}! Module disabled for guild.")
-                else:
-                    print(f"Minecraft channel doesn't exist in {guild.name}! Module disabled for guild.")
-            else:
+            if not guild:
                 print(f"Guild {g.id} not found during Minecraft init.")
+                continue
+            channel = guild.get_channel(g.minecraft_channel_id)
+            if not channel:
+                print(f"Minecraft channel doesn't exist in {guild.name}! Module disabled for guild.")
+                continue
+            if not channel.permissions_for(guild.me).send_messages:
+                print(f"Missing permissions for Minecraft channel in {guild.name}! Module disabled for guild.")
+                continue
+            self.guilds[guild] = GuildState(
+                guild=guild,
+                channel=channel,
+                rcon_address=g.minecraft_rcon_address,
+                rcon_pass=g.minecraft_rcon_pass
+            )
 
     @commands.command()
     async def whitelist(self, ctx, username):
         state = self.guilds.get(ctx.guild)
-        if state and ctx.channel == state.channel:
-            if len(ctx.author.roles) == 1:
-                # every member has @everyone
-                await ctx.send(f'Sorry, we only just met. Talk to me once you have a role.')
-                return
+        if not (state and ctx.channel == state.channel):
+            return
+        if len(ctx.author.roles) == 1:
+            # every member has @everyone
+            await ctx.send(f'Sorry, we only just met. Talk to me once you have a role.')
+            return
 
-            member = db.query(_Member).get((ctx.author.id, ctx.guild.id)) or _Member(user_id=ctx.author.id,
-                                                                                     guild_id=ctx.guild.id)
-            previous_username = member.minecraft_username
+        member = db.query(_Member).get((ctx.author.id, ctx.guild.id)) or _Member(user_id=ctx.author.id,
+                                                                                    guild_id=ctx.guild.id)
+        previous_username = member.minecraft_username
 
-            try:
-                with MCRcon(state.rcon_address, state.rcon_pass) as rcon:
-                    if previous_username:
-                        rcon.command(f'whitelist remove {previous_username}')
-                    res = rcon.command(f'whitelist add {username}')
-                    print(res)
-                    assert ('Added' in res or 'already whitelisted' in res)
-
-                member.minecraft_username = username
-                db.add(member)
-                db.commit()
-
+        try:
+            with MCRcon(state.rcon_address, state.rcon_pass) as rcon:
                 if previous_username:
-                    msg = f"Hmm... I already whitelisted '{previous_username}' for you earlier, though. "
-                    msg += f"Oh well, I'll remove that username and add '{username}' instead. "
-                else:
-                    msg = "I have added you to the whitelist. "
-                msg += random.choice(trust_messages)
-                await ctx.send(msg)
+                    rcon.command(f'whitelist remove {previous_username}')
+                res = rcon.command(f'whitelist add {username}')
+                print(res)
+                assert ('Added' in res or 'already whitelisted' in res)
 
-            except (MCRconException, ConnectionError, AssertionError) as e:
-                await ctx.send("I'm terribly sorry, but I'm unable to do that at the moment. Please try again later.")
-                print(e)
+            member.minecraft_username = username
+            db.add(member)
+            db.commit()
+
+            if previous_username:
+                msg = f"Hmm... I already whitelisted '{previous_username}' for you earlier, though. "
+                msg += f"Oh well, I'll remove that username and add '{username}' instead. "
+            else:
+                msg = "I have added you to the whitelist. "
+            msg += random.choice(trust_messages)
+            await ctx.send(msg)
+
+        except (MCRconException, ConnectionError, AssertionError) as e:
+            await ctx.send("I'm terribly sorry, but I'm unable to do that at the moment. Please try again later.")
+            print(e)
 
 
 def setup(bot: commands.Bot):

@@ -114,17 +114,16 @@ class Wordle(commands.Cog):
     def load_from_db(self):
         for g in db.query(_Guild).filter(_Guild.wordle_channel_id.isnot(None)).all():
             guild: Guild = self.bot.get_guild(g.id)
-            if guild:
-                channel = guild.get_channel(g.wordle_channel_id)
-                if channel:
-                    if channel.permissions_for(guild.me).send_messages:
-                        self.guilds[guild] = GuildState(guild=guild, channel=channel)
-                    else:
-                        print(f"Missing permissions for Wordle channel in {guild.name}. Wordle disabled in guild.")
-                else:
-                    print(f"Wordle channel doesn't exist in {guild.name}. Wordle disabled in guild.")
-            else:
+            if not guild:
                 print(f"Guild {g.id} not found during Wordle init.")
+                continue
+            channel = guild.get_channel(g.wordle_channel_id)
+            if not channel:
+                print(f"Wordle channel doesn't exist in {guild.name}. Wordle disabled in guild.")
+                continue
+            if not channel.permissions_for(guild.me).send_messages:
+                print(f"Missing permissions for Wordle channel in {guild.name}. Wordle disabled in guild.")
+            self.guilds[guild] = GuildState(guild=guild, channel=channel)
 
     def reset(self, guild: Guild):
         self.guilds[guild] = GuildState(guild=guild, channel=self.guilds[guild].channel)

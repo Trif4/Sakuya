@@ -37,47 +37,50 @@ class Sentinel(commands.Cog):
     def load_from_db(self):
         for g in db.query(_Guild).filter(_Guild.sentinel_channel_id.isnot(None)).all():
             guild: Guild = self.bot.get_guild(g.id)
-            if guild:
-                channel = guild.get_channel(g.sentinel_channel_id)
-                if channel:
-                    if channel.permissions_for(guild.me).send_messages:
-                        self.guilds[guild] = GuildState(guild=guild, alert_channel=channel)
-                    else:
-                        print(f"Missing permissions for alert channel in {guild.name}! Sentinel disabled in guild.")
-                else:
-                    print(f"Alert channel doesn't exist in {guild.name}! Sentinel disabled in guild.")
-            else:
+            if not guild:
                 print(f"Guild {g.id} not found during Sentinel init.")
+                continue
+            channel = guild.get_channel(g.sentinel_channel_id)
+            if not channel:
+                print(f"Alert channel doesn't exist in {guild.name}! Sentinel disabled in guild.")
+                continue
+            if not channel.permissions_for(guild.me).send_messages:
+                print(f"Missing permissions for alert channel in {guild.name}! Sentinel disabled in guild.")
+                continue
+            self.guilds[guild] = GuildState(guild=guild, alert_channel=channel)
 
     @commands.Cog.listener()
     async def on_member_join(self, member: Member):
         state = self.guilds.get(member.guild)
-        if state:
-            # Guild has sentinel enabled
-            now = datetime.utcnow()
-            account_age = now - member.created_at
-            if account_age.days < SUSPICIOUS_ACCOUNT_AGE_LIMIT_DAYS:
-                # Update state
-                if state.last_alert and now - state.last_alert > timedelta(minutes=ALERT_RESET_MINUTES):
-                    # It's been quiet for a while, reset counter
-                    state.recent_alerts = 0
-                state.last_alert = now
-                state.recent_alerts += 1
+        if not state:
+            return
+        # Guild has sentinel enabled
+        now = datetime.utcnow()
+        account_age = now - member.created_at
+        if not (account_age.days < SUSPICIOUS_ACCOUNT_AGE_LIMIT_DAYS):
+            return
+        # Update state
+        if state.last_alert and now - state.last_alert > timedelta(minutes=ALERT_RESET_MINUTES):
+            # It's been quiet for a while, reset counter
+            state.recent_alerts = 0
+        state.last_alert = now
+        state.recent_alerts += 1
 
-                # Alert
-                if state.recent_alerts <= 3:
-                    days = account_age.days
-                    hours = int(account_age.seconds / 60 / 60)
-                    minutes = account_age.seconds // 60 % 60
-                    age_string = f'{days}d {hours}h {minutes}m'
-                    msg = f'Suspicious user {member.mention} joined the server (account age: {age_string}).'
-                    if state.recent_alerts == 3:
-                        msg += "\nI believe we are being raided. I will silence further alerts until things have been "
-                        msg += f"calm for {ALERT_RESET_MINUTES} minutes."
-                    try:
-                        await state.alert_channel.send(msg)
-                    except Forbidden:
-                        print(f'Missing permissions for alert channel in {state.guild.name}! Alert not delivered.')
+        # Alert
+        if not (state.recent_alerts <= 3):
+            return
+        days = account_age.days
+        hours = int(account_age.seconds / 60 / 60)
+        minutes = account_age.seconds // 60 % 60
+        age_string = f'{days}d {hours}h {minutes}m'
+        msg = f'Suspicious user {member.mention} joined the server (account age: {age_string}).'
+        if state.recent_alerts == 3:
+            msg += "\nI believe we are being raided. I will silence further alerts until things have been "
+            msg += f"calm for {ALERT_RESET_MINUTES} minutes."
+        try:
+            await state.alert_channel.send(msg)
+        except Forbidden:
+            print(f'Missing permissions for alert channel in {state.guild.name}! Alert not delivered.')
 
     async def enable(self, ctx, alert_channel: TextChannel = None):
         channel = alert_channel or ctx.channel
