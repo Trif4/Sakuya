@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+import logging
 import random
 from typing import Dict
 
@@ -10,7 +11,7 @@ from sqlalchemy import select
 from .db import Session, Guild, Member
 
 
-trust_messages = [
+TRUST_MESSAGES = [
     "Play nice!",
     "I'll be watching you.",
     "Please follow the rules.",
@@ -22,6 +23,8 @@ trust_messages = [
     "I won't help you find diamonds, though.",
     "Please respect the staff."
 ]
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -44,7 +47,7 @@ class Minecraft(commands.Cog):
         if not self.data_loaded:
             self.data_loaded = True
             await self.load_from_db()
-            print('Minecraft configuration loaded.')
+            logger.info('Minecraft configuration loaded.')
 
     async def load_from_db(self):
         async with Session() as session:
@@ -53,14 +56,14 @@ class Minecraft(commands.Cog):
         for g in guilds:
             guild = self.bot.get_guild(g.id)
             if not guild:
-                print(f"Guild {g.id} not found during Minecraft init.")
+                logger.warning(f"Guild {g.id} not found during Minecraft init.")
                 return
             channel = guild.get_channel(g.minecraft_channel_id)
             if not channel:
-                print(f"Minecraft channel doesn't exist in {guild.name}! Module disabled for guild.")
+                logger.warning(f"Minecraft channel doesn't exist in {guild.name}! Module disabled for guild.")
                 return
             if not channel.permissions_for(guild.me).send_messages:
-                print(f"Missing permissions for Minecraft channel in {guild.name}! Module disabled for guild.")
+                logger.warning(f"Missing permissions for Minecraft channel in {guild.name}! Module disabled for guild.")
                 return
             self.guilds[guild] = GuildState(
                 guild=guild,
@@ -87,9 +90,12 @@ class Minecraft(commands.Cog):
             try:
                 with MCRcon(state.rcon_address, state.rcon_pass) as rcon:
                     if previous_username:
-                        rcon.command(f'whitelist remove {previous_username}')
+                        logger.info(f'Removing "{previous_username}" from whitelist (replacing with new username)')
+                        res = rcon.command(f'whitelist remove {previous_username}')
+                        logger.info(f'Server response: {res}')
+                    logger.info(f'Adding {username} to whitelist')
                     res = rcon.command(f'whitelist add {username}')
-                    print(res)
+                    logger.info(f'Server response: {res}')
                     assert ('Added' in res or 'already whitelisted' in res)
 
                 member.minecraft_username = username
@@ -100,12 +106,12 @@ class Minecraft(commands.Cog):
                     msg += f"Oh well, I'll remove that username and add '{username}' instead. "
                 else:
                     msg = "I have added you to the whitelist. "
-                msg += random.choice(trust_messages)
+                msg += random.choice(TRUST_MESSAGES)
                 await ctx.send(msg)
 
             except (MCRconException, ConnectionError, AssertionError) as e:
                 await ctx.send("I'm terribly sorry, but I'm unable to do that at the moment. Please try again later.")
-                print(e)
+                logger.error(e)
 
 
 async def setup(bot: commands.Bot):

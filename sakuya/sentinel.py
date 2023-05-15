@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
+import logging
 from typing import Dict
 
 import discord
@@ -11,6 +12,8 @@ from .db import Session, Guild
 
 SUSPICIOUS_ACCOUNT_AGE_LIMIT_DAYS = 7
 ALERT_RESET_MINUTES = 15
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -33,7 +36,7 @@ class Sentinel(commands.Cog):
         if not self.data_loaded:
             self.data_loaded = True
             await self.load_from_db()
-            print('Sentinel ready.')
+            logger.info('Sentinel ready.')
 
     async def load_from_db(self):
         async with Session() as session:
@@ -42,14 +45,14 @@ class Sentinel(commands.Cog):
         for g in guilds:
             guild = self.bot.get_guild(g.id)
             if not guild:
-                print(f"Guild {g.id} not found during Sentinel init.")
+                logger.warning(f"Guild {g.id} not found during Sentinel init.")
                 return
             channel = guild.get_channel(g.sentinel_channel_id)
             if not channel:
-                print(f"Alert channel doesn't exist in {guild.name}! Sentinel disabled in guild.")
+                logger.warning(f"Alert channel doesn't exist in {guild.name}! Sentinel disabled in guild.")
                 return
             if not channel.permissions_for(guild.me).send_messages:
-                print(f"Missing permissions for alert channel in {guild.name}! Sentinel disabled in guild.")
+                logger.warning(f"Missing permissions for alert channel in {guild.name}! Sentinel disabled in guild.")
                 return
             self.guilds[guild] = GuildState(guild=guild, alert_channel=channel)
 
@@ -82,7 +85,9 @@ class Sentinel(commands.Cog):
                 try:
                     await state.alert_channel.send(msg)
                 except discord.Forbidden:
-                    print(f'Missing permissions for alert channel in {state.guild.name}! Alert not delivered.')
+                    logger.warning(
+                        f'Missing permissions for alert channel in {state.guild.name}! Alert not delivered.'
+                    )
 
     async def enable(self, ctx, alert_channel: discord.TextChannel = None):
         channel = alert_channel or ctx.channel

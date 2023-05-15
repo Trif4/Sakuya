@@ -1,3 +1,4 @@
+import logging
 import os
 import random
 import re
@@ -31,6 +32,8 @@ INVALID_GUESS_RESPONSES = [
     "I'm not sure I know what you mean. Try again.",
     "English only, please."
 ]
+
+logger = logging.getLogger(__name__)
 
 
 with open('wordle/word_list.txt') as f:
@@ -110,7 +113,7 @@ class Wordle(commands.Cog):
         if not self.data_loaded:
             self.data_loaded = True
             await self.load_from_db()
-            print("Wordle module ready.")
+            logger.info("Wordle module ready.")
 
     async def load_from_db(self):
         async with Session() as session:
@@ -119,14 +122,14 @@ class Wordle(commands.Cog):
         for g in guilds:
             guild = self.bot.get_guild(g.id)
             if not guild:
-                print(f"Guild {g.id} not found during Wordle init.")
+                logger.warning(f"Guild {g.id} not found during Wordle init.")
                 return
             channel = guild.get_channel(g.wordle_channel_id)
             if not channel:
-                print(f"Wordle channel doesn't exist in {guild.name}. Wordle disabled in guild.")
+                logger.warning(f"Wordle channel doesn't exist in {guild.name}. Wordle disabled in guild.")
                 return
             if not channel.permissions_for(guild.me).send_messages:
-                print(f"Missing permissions for Wordle channel in {guild.name}. Wordle disabled in guild.")
+                logger.warning(f"Missing permissions for Wordle channel in {guild.name}. Wordle disabled in guild.")
                 return
             self.guilds[guild] = GuildState(guild=guild, channel=channel)
 
@@ -227,7 +230,7 @@ class Wordle(commands.Cog):
 
     async def enable(self, ctx: commands.Context):
         if not ctx.channel.permissions_for(ctx.me).send_messages:
-            print(f"Tried to enable Wordle in {ctx.guild.name}, but missing permissions in channel.")
+            logger.warning(f"Tried to enable Wordle in {ctx.guild.name}, but missing permissions in channel.")
             return
         self.guilds[ctx.guild] = GuildState(guild=ctx.guild, channel=ctx.channel)
         async with Session.begin() as session:
