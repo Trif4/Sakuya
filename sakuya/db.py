@@ -1,6 +1,7 @@
+from sqlalchemy import event, ForeignKey, TEXT
 from sqlalchemy.engine import Engine
-from sqlalchemy import event
-from sqla_wrapper import SQLAlchemy
+from sqlalchemy.ext.asyncio import AsyncAttrs, async_sessionmaker, create_async_engine
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 
 @event.listens_for(Engine, "connect")
@@ -10,23 +11,38 @@ def set_sqlite_pragma(dbapi_connection, connection_record):
     cursor.close()
 
 
-db = SQLAlchemy('sqlite:///db.sqlite')
+engine = create_async_engine("sqlite+aiosqlite:///db.sqlite")
+Session = async_sessionmaker(engine, expire_on_commit=False)
 
 
-class Guild(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    sentinel_channel_id = db.Column(db.Integer)
-
-    minecraft_channel_id = db.Column(db.Integer)
-    minecraft_rcon_address = db.Column(db.Text)
-    minecraft_rcon_pass = db.Column(db.Text)
-
-    wordle_channel_id = db.Column(db.Integer)
-
-    members = db.relationship('Member', backref='guild', cascade='all, delete-orphan')
+class Base(AsyncAttrs, DeclarativeBase):
+    type_annotation_map = {
+        str: TEXT
+    }
 
 
-class Member(db.Model):
-    user_id = db.Column(db.Integer, primary_key=True)
-    guild_id = db.Column(db.Integer, db.ForeignKey('guilds.id'), primary_key=True)
-    minecraft_username = db.Column(db.Text)
+class Guild(Base):
+    __tablename__ = 'guilds'
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    sentinel_channel_id: Mapped[int | None]
+
+    minecraft_channel_id: Mapped[int | None]
+    minecraft_rcon_address: Mapped[str | None]
+    minecraft_rcon_pass: Mapped[str | None]
+
+    wordle_channel_id: Mapped[int | None]
+
+    members: Mapped[list['Member']] = relationship(
+        back_populates='guild', cascade='save-update, merge, expunge, delete, delete-orphan'
+    )
+
+
+class Member(Base):
+    __tablename__ = 'members'
+
+    user_id: Mapped[int] = mapped_column(primary_key=True)
+    guild_id: Mapped[int] = mapped_column(ForeignKey('guilds.id'), primary_key=True)
+    guild: Mapped['Guild'] = relationship(back_populates='members')
+
+    minecraft_username: Mapped[str | None]

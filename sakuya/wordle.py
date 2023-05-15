@@ -7,11 +7,12 @@ from dataclasses import dataclass
 from datetime import datetime, time, timedelta
 from typing import Dict
 
-from discord import Guild, TextChannel, Member
+import discord
 from discord.ext import commands
 import emoji
+from sqlalchemy import select
 
-from .db import db, Guild as _Guild
+from .db import Session, Guild
 
 
 GAMES_PER_DAY = 3
@@ -82,13 +83,13 @@ def emojify_guess(guess, solution):
 
 @dataclass
 class GuildState:
-    guild: Guild
-    channel: TextChannel
+    guild: discord.Guild
+    channel: discord.TextChannel
     word: str = None
     game_start: datetime = None
     last_guess_at: datetime = datetime.utcfromtimestamp(0)
     guesses: list[str] = None
-    guessers: set[Member] = None
+    guessers: set[discord.Member] = None
 
     def started(self):
         return self.word is not None and self.guesses is not None
@@ -100,7 +101,7 @@ class GuildState:
 class Wordle(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
-        self.guilds: Dict[Guild, GuildState] = dict()
+        self.guilds: Dict[discord.Guild, GuildState] = dict()
         self.data_loaded = False
 
     @commands.Cog.listener()
@@ -108,25 +109,28 @@ class Wordle(commands.Cog):
         # This event fires on reconnects, but we only want it to run once
         if not self.data_loaded:
             self.data_loaded = True
-            self.load_from_db()
+            await self.load_from_db()
             print("Wordle module ready.")
 
-    def load_from_db(self):
-        for g in db.query(_Guild).filter(_Guild.wordle_channel_id.isnot(None)).all():
-            guild: Guild = self.bot.get_guild(g.id)
-            if guild:
-                channel = guild.get_channel(g.wordle_channel_id)
-                if channel:
-                    if channel.permissions_for(guild.me).send_messages:
-                        self.guilds[guild] = GuildState(guild=guild, channel=channel)
-                    else:
-                        print(f"Missing permissions for Wordle channel in {guild.name}. Wordle disabled in guild.")
-                else:
-                    print(f"Wordle channel doesn't exist in {guild.name}. Wordle disabled in guild.")
-            else:
+    async def load_from_db(self):
+        async with Session() as session:
+            query = select(Guild).where(Guild.wordle_channel_id.isnot(None))
+            guilds = (await session.scalars(query)).all()
+        for g in guilds:
+            guild = self.bot.get_guild(g.id)
+            if not guild:
                 print(f"Guild {g.id} not found during Wordle init.")
+                return
+            channel = guild.get_channel(g.wordle_channel_id)
+            if not channel:
+                print(f"Wordle channel doesn't exist in {guild.name}. Wordle disabled in guild.")
+                return
+            if not channel.permissions_for(guild.me).send_messages:
+                print(f"Missing permissions for Wordle channel in {guild.name}. Wordle disabled in guild.")
+                return
+            self.guilds[guild] = GuildState(guild=guild, channel=channel)
 
-    def reset(self, guild: Guild):
+    def reset(self, guild: discord.Guild):
         self.guilds[guild] = GuildState(guild=guild, channel=self.guilds[guild].channel)
 
     @commands.command()
@@ -226,20 +230,19 @@ class Wordle(commands.Cog):
             print(f"Tried to enable Wordle in {ctx.guild.name}, but missing permissions in channel.")
             return
         self.guilds[ctx.guild] = GuildState(guild=ctx.guild, channel=ctx.channel)
-        g = db.query(_Guild).get(ctx.guild.id) or _Guild(id=ctx.guild.id)
-        g.wordle_channel_id = ctx.channel.id
-        db.add(g)
-        db.commit()
+        async with Session.begin() as session:
+            g = await session.get(Guild, ctx.guild.id) or Guild(id=ctx.guild.id)
+            g.wordle_channel_id = ctx.channel.id
+            session.add(g)
         await ctx.send('Wordle game enabled for this channel. Start guessing with "Maid, guess [word]".')
 
     async def disable(self, ctx: commands.Context):
         del self.guilds[ctx.guild]
-        g = db.query(_Guild).get(ctx.guild.id)
-        g.wordle_channel_id = None
-        db.add(g)
-        db.commit()
+        async with Session.begin() as session:
+            g = await session.get(Guild, ctx.guild.id)
+            g.wordle_channel_id = None
         await ctx.send('Wordle game disabled.')
 
 
-def setup(bot: commands.Bot):
-    bot.add_cog(Wordle(bot))
+async def setup(bot: commands.Bot):
+    await bot.add_cog(Wordle(bot))

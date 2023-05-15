@@ -1,8 +1,9 @@
+import asyncio
 import os
 
 from dotenv import load_dotenv
 load_dotenv()
 
-from sakuya.client import bot
+from sakuya.client import start
 
-bot.run(os.getenv('DISCORD_TOKEN'))
+asyncio.run(start(os.getenv('DISCORD_TOKEN')))

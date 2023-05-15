@@ -14,5 +14,5 @@ class Hewo(commands.Cog):
             await message.channel.send('HEWO ' * hewos)
 
 
-def setup(bot: commands.Bot):
-    bot.add_cog(Hewo(bot))
+async def setup(bot: commands.Bot):
+    await bot.add_cog(Hewo(bot))

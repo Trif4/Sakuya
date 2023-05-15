@@ -1,4 +1,4 @@
-from discord import TextChannel
+import discord
 from discord.ext import commands
 
 
@@ -13,7 +13,7 @@ class Settings(commands.Cog):
 
     @enable.command(name='sentinel')
     @commands.has_guild_permissions(ban_members=True)
-    async def enable_sentinel(self, ctx, *, alert_channel: TextChannel = None):
+    async def enable_sentinel(self, ctx, *, alert_channel: discord.TextChannel | None = None):
         await self.bot.get_cog('Sentinel').enable(ctx, alert_channel)
 
     @enable.command(name='wordle')
@@ -37,5 +37,5 @@ class Settings(commands.Cog):
         await self.bot.get_cog('Wordle').disable(ctx)
 
 
-def setup(bot: commands.Bot):
-    bot.add_cog(Settings(bot))
+async def setup(bot: commands.Bot):
+    await bot.add_cog(Settings(bot))

@@ -1,6 +1,7 @@
+import asyncio
 import os
 
-from discord import Activity, ActivityType, Intents
+import discord
 from discord.ext.commands import Bot
 
 base_prefixes = [
@@ -26,15 +27,27 @@ prefixes = [variant(p) for p in base_prefixes for variant in (
     )
 ]
 
-intents = Intents.default()
-# Required to get member joins for Sentinel
+intents = discord.Intents.default()
 intents.members = True
+intents.message_content = True
 
-bot = Bot(command_prefix=prefixes, intents=intents, help_command=None, activity=Activity(type=ActivityType.watching, name='you'))
+discord.utils.setup_logging()
 
-bot.load_extension('sakuya.settings')
-bot.load_extension('sakuya.hi')
-bot.load_extension('sakuya.hewo')
-bot.load_extension('sakuya.sentinel')
-bot.load_extension('sakuya.minecraft')
-bot.load_extension('sakuya.wordle')
+bot = Bot(
+    command_prefix=prefixes,
+    intents=intents,
+    help_command=None,
+    activity=discord.Activity(type=discord.ActivityType.watching, name='you')
+)
+
+
+async def start(token: str):
+    await asyncio.gather(
+        bot.load_extension('sakuya.settings'),
+        bot.load_extension('sakuya.hi'),
+        bot.load_extension('sakuya.hewo'),
+        bot.load_extension('sakuya.sentinel'),
+        bot.load_extension('sakuya.minecraft'),
+        bot.load_extension('sakuya.wordle'),
+    )
+    await bot.start(token)
