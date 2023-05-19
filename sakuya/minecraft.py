@@ -57,14 +57,14 @@ class Minecraft(commands.Cog):
             guild = self.bot.get_guild(g.id)
             if not guild:
                 logger.warning(f"Guild {g.id} not found during Minecraft init.")
-                return
+                continue
             channel = guild.get_channel(g.minecraft_channel_id)
             if not channel:
                 logger.warning(f"Minecraft channel doesn't exist in {guild.name}! Module disabled for guild.")
-                return
+                continue
             if not channel.permissions_for(guild.me).send_messages:
                 logger.warning(f"Missing permissions for Minecraft channel in {guild.name}! Module disabled for guild.")
-                return
+                continue
             self.guilds[guild] = GuildState(
                 guild=guild,
                 channel=channel,

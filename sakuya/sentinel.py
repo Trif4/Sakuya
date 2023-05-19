@@ -46,14 +46,14 @@ class Sentinel(commands.Cog):
             guild = self.bot.get_guild(g.id)
             if not guild:
                 logger.warning(f"Guild {g.id} not found during Sentinel init.")
-                return
+                continue
             channel = guild.get_channel(g.sentinel_channel_id)
             if not channel:
                 logger.warning(f"Alert channel doesn't exist in {guild.name}! Sentinel disabled in guild.")
-                return
+                continue
             if not channel.permissions_for(guild.me).send_messages:
                 logger.warning(f"Missing permissions for alert channel in {guild.name}! Sentinel disabled in guild.")
-                return
+                continue
             self.guilds[guild] = GuildState(guild=guild, alert_channel=channel)
 
     @commands.Cog.listener()
@@ -64,30 +64,33 @@ class Sentinel(commands.Cog):
             return
         now = datetime.now(timezone.utc)
         account_age = now - member.created_at
-        if account_age.days < SUSPICIOUS_ACCOUNT_AGE_LIMIT_DAYS:
-            # Update state
-            if state.last_alert and now - state.last_alert > timedelta(minutes=ALERT_RESET_MINUTES):
-                # It's been quiet for a while, reset counter
-                state.recent_alerts = 0
-            state.last_alert = now
-            state.recent_alerts += 1
+        # Update state
+        if account_age.days >= SUSPICIOUS_ACCOUNT_AGE_LIMIT_DAYS:
+            return
+        if state.last_alert and now - state.last_alert > timedelta(minutes=ALERT_RESET_MINUTES):
+            # It's been quiet for a while, reset counter
+            state.recent_alerts = 0
+        state.last_alert = now
+        state.recent_alerts += 1
+        if state.recent_alerts > 3:
+            # Muted
+            return
 
-            # Alert
-            if state.recent_alerts <= 3:
-                days = account_age.days
-                hours = int(account_age.seconds / 60 / 60)
-                minutes = account_age.seconds // 60 % 60
-                age_string = f'{days}d {hours}h {minutes}m'
-                msg = f'Suspicious user {member.mention} joined the server (account age: {age_string}).'
-                if state.recent_alerts == 3:
-                    msg += '\nI believe we are being raided. I will silence further alerts until things have been '
-                    msg += f'calm for {ALERT_RESET_MINUTES} minutes.'
-                try:
-                    await state.alert_channel.send(msg)
-                except discord.Forbidden:
-                    logger.warning(
-                        f'Missing permissions for alert channel in {state.guild.name}! Alert not delivered.'
-                    )
+        # Alert
+        days = account_age.days
+        hours = int(account_age.seconds / 60 / 60)
+        minutes = account_age.seconds // 60 % 60
+        age_string = f'{days}d {hours}h {minutes}m'
+        msg = f'Suspicious user {member.mention} joined the server (account age: {age_string}).'
+        if state.recent_alerts == 3:
+            msg += '\nI believe we are being raided. I will silence further alerts until things have been '
+            msg += f'calm for {ALERT_RESET_MINUTES} minutes.'
+        try:
+            await state.alert_channel.send(msg)
+        except discord.Forbidden:
+            logger.warning(
+                f'Missing permissions for alert channel in {state.guild.name}! Alert not delivered.'
+            )
 
     async def enable(self, ctx, alert_channel: discord.TextChannel = None):
         channel = alert_channel or ctx.channel

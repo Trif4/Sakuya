@@ -225,14 +225,14 @@ class Wordle(commands.Cog):
             guild = self.bot.get_guild(g.id)
             if not guild:
                 logger.warning(f"Guild {g.id} not found during Wordle init.")
-                return
+                continue
             channel = guild.get_channel(g.wordle_channel_id)
             if not channel:
                 logger.warning(f"Wordle channel doesn't exist in {guild.name}. Wordle disabled in guild.")
-                return
+                continue
             if not channel.permissions_for(guild.me).send_messages:
                 logger.warning(f"Missing permissions for Wordle channel in {guild.name}. Wordle disabled in guild.")
-                return
+                continue
             self.guilds[guild] = GuildState(guild=guild, channel=channel)
 
     def reset(self, guild: discord.Guild):
