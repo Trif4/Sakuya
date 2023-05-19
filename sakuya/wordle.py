@@ -6,7 +6,7 @@ import re
 import string
 from collections import Counter
 from dataclasses import dataclass
-from datetime import datetime, time, timedelta
+from datetime import datetime, time, timedelta, timezone
 from typing import Dict, Type
 
 import discord
@@ -50,17 +50,14 @@ with open('wordle/emoji.txt') as f:
 
 
 def current_game_start():
-    midnight = datetime.combine(datetime.utcnow(), time.min)
+    midnight = datetime.combine(datetime.utcnow(), time.min, timezone.utc)
     start_times = [midnight + GAME_TIMEDELTA*i for i in range(GAMES_PER_DAY)]
-    return max(st for st in start_times if st <= datetime.utcnow())
+    return max(st for st in start_times if st <= datetime.now(timezone.utc))
 
 
 def time_until_next_game():
     next_start = current_game_start() + GAME_TIMEDELTA
-    duration = next_start - datetime.utcnow()
-    hours, remainder = divmod(duration.total_seconds(), 3600)
-    minutes = remainder // 60
-    return f'{int(hours)}h{int(minutes):02}m'
+    return discord.utils.format_dt(next_start, 'R')
 
 
 class GuessSegment:
@@ -244,7 +241,7 @@ class Wordle(commands.Cog):
     @commands.command()
     async def guess(self, ctx: commands.Context, *guess: str):
         state = self.guilds.get(ctx.guild)
-        if not (state and ctx.channel == state.channel) or (datetime.utcnow() - state.last_guess_at).seconds < 3:
+        if not (state and ctx.channel == state.channel) or (datetime.now() - state.last_guess_at).seconds < 3:
             # Second condition prevents accidental simultaneous guesses by multiple players
             return
         if state.game_start != current_game_start():
@@ -262,7 +259,7 @@ class Wordle(commands.Cog):
             state.guesses = []
             state.guessers = set()
         if state.finished():
-            await ctx.send(f"I'm preparing for the next game. Come back in {time_until_next_game()}!")
+            await ctx.send(f"I'm preparing for the next game. Come back {time_until_next_game()}!")
             return
         if ctx.author in state.guessers and not os.getenv('SAKUYA_DEBUG'):
             await ctx.send("It's more fun if everyone gets to guess. Please come play again later, though!")
@@ -290,7 +287,7 @@ class Wordle(commands.Cog):
         # Finally done validating. Process the guess!
         state.guesses.append(guess)
         state.guessers.add(ctx.author)
-        state.last_guess_at = datetime.utcnow()
+        state.last_guess_at = datetime.now()
 
         if guess == state.word:
             game_state = 'won'
@@ -318,10 +315,10 @@ class Wordle(commands.Cog):
                     msg += "\nCare for an extra round? I've got more time to play since you were so quick."
                     self.reset(state.guild)
                 else:
-                    msg += f"\nNext game will be ready in {time_until_next_game()}."
+                    msg += f"\nNext game ready {time_until_next_game()}."
             case 'lost':
                 msg += f"You lost. The word was **{state.word.upper()}**."
-                msg += f"\nNext game will be ready in {time_until_next_game()}."
+                msg += f"\nNext game ready {time_until_next_game()}."
             case 'playing':
                 msg += "Available letters:\n"
                 guessed_letters = {letter for guess in state.guesses for letter in guess}
