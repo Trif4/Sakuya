@@ -3,5 +3,7 @@ aiosqlite==0.19.0
 discord.py==2.2.3
 emoji==2.2.0
 mcrcon==0.7.0
+pytest==7.3.1
 python-dotenv==1.0.0
 SQLAlchemy[asyncio]==2.0.13
+wordninja==2.0.0

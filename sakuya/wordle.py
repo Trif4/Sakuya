@@ -1,3 +1,4 @@
+import itertools
 import logging
 import os
 import random
@@ -6,12 +7,13 @@ import string
 from collections import Counter
 from dataclasses import dataclass
 from datetime import datetime, time, timedelta
-from typing import Dict
+from typing import Dict, Type
 
 import discord
 from discord.ext import commands
 import emoji
 from sqlalchemy import select
+import wordninja
 
 from .db import Session, Guild
 
@@ -32,6 +34,7 @@ INVALID_GUESS_RESPONSES = [
     "I'm not sure I know what you mean. Try again.",
     "English only, please."
 ]
+DISCORD_EMOTE_REGEX = re.compile(r'<a?:(\w+):\d+>', re.ASCII)
 
 logger = logging.getLogger(__name__)
 
@@ -60,17 +63,119 @@ def time_until_next_game():
     return f'{int(hours)}h{int(minutes):02}m'
 
 
+class GuessSegment:
+    def __init__(self, value):
+        self.value = value
+
+    def __repr__(self):
+        return f'<{self.__class__.__name__}: "{self.value}">'
+
+    @property
+    def _aliases(self) -> set[str]:
+        return {self.value}
+
+    def explode(self) -> set[str]:
+        values = self._aliases.union(*(wordninja.split(a) for a in self._aliases))
+        # Very naively attempt to add singular versions of plural nouns
+        # We could use a library, but players probably don't expect e.g. "women" to turn into "woman", so this will do
+        values |= {v[:-1] for v in values if v and v[-1] == 's'}
+        # Strip out any special characters and lowercase
+        values = {re.sub('[^a-z]+', '', v.lower()) for v in values}
+        return values
+
+
+class EmojiGuessSegment(GuessSegment):
+    @property
+    def _aliases(self) -> set[str]:
+        data = emoji.EMOJI_DATA.get(self.value)
+        if not data:
+            return {''}
+        return {data['en']} | set(data.get('alias', []))
+
+
+class DiscordEmoteGuessSegment(GuessSegment):
+    pass
+
+
+class StringGuessSegment(GuessSegment):
+    def explode(self) -> set[str]:
+        return {self.value.lower()}
+
+
+def segmentize_guess(guess: str) -> list[GuessSegment]:
+    def segmentize(
+            text, matches: list[tuple[int, int, GuessSegment]], nonmatch_class: Type[str | StringGuessSegment]
+    ) -> list[str | GuessSegment]:
+        segments = []
+        pos = 0
+        for start, end, matched in matches:
+            if start > pos:
+                segments.append(nonmatch_class(text[pos:start]))
+            segments.append(matched)
+            pos = end
+        if pos < len(text):
+            segments.append(nonmatch_class(text[pos:]))
+        return segments
+
+    # First, split into segments of regular emoji & "unprocessed" strings
+    emoji_matches = [(m['match_start'], m['match_end'], EmojiGuessSegment(m['emoji'])) for m in emoji.emoji_list(guess)]
+    segments_partial = segmentize(guess, emoji_matches, str)
+
+    # Now split unprocessed strings into Discord emote segments & string segments
+    segments = []
+    for s in segments_partial:
+        if isinstance(s, str):
+            segments.extend(segmentize(
+                s,
+                [(m.start(), m.end(), DiscordEmoteGuessSegment(m.group(1)))
+                 for m in DISCORD_EMOTE_REGEX.finditer(s)],
+                StringGuessSegment
+            ))
+        else:
+            segments.append(s)
+
+    return segments
+
+
+class GuessLengthError(Exception):
+    """Raised when a guess is not 5 letters long."""
+    pass
+
+
+class InvalidGuessError(Exception):
+    """Raised when a guess has the correct length but cannot be found in the valid words dictionary."""
+    pass
+
+
 def parse_guess(guess):
+    """Returns a valid guess. Guesses are parsed using the patented GuessGPT Emoji AI Interpretation Engine™.
+
+    Raises `GuessLengthError` when no guess of the correct length can be found.
+    Raises `InvalidGuessError` when no guess in the valid words dictionary can be found.
+    """
     if not guess:
-        return None
-    # Transform Unicode emoji to text
-    guess = emoji.demojize(guess, delimiters=('', ''))
-    # Transform Discord emoji to text
-    guess = re.sub(r'<.*?:(.*?):.*?>', r'\1', guess)
-    return guess.lower()
+        raise GuessLengthError
+
+    segments = segmentize_guess(guess)
+    if len(segments) > 5:
+        raise GuessLengthError
+
+    # Emotes & emoji often have multiple possible interpretations, so first we generate every possible combination
+    interpretations = ["".join(i) for i in itertools.product(*[s.explode() for s in segments])]
+    if not any(len(i) == 5 for i in interpretations):
+        raise GuessLengthError
+    # Then filter out interpretations that aren't valid guesses anyway
+    interpretations = [i for i in interpretations if i in VALID_GUESSES]
+    if not interpretations:
+        raise InvalidGuessError
+
+    # Finally, pick the interpretation that's the most specific (determined by word cost)
+    # This means that e.g. the "woman_pilot" emoji gets interpreted as "pilot" rather than "woman"
+    return max(interpretations, key=lambda i: wordninja.DEFAULT_LANGUAGE_MODEL._wordcost.get(i, 999))
 
 
 def emojify_guess(guess, solution):
+    """Formats a guess as grey/yellow/green letter emotes."""
     letters = Counter(solution)
     result = [0]*5
     for i, letter in enumerate(guess):
@@ -137,14 +242,10 @@ class Wordle(commands.Cog):
         self.guilds[guild] = GuildState(guild=guild, channel=self.guilds[guild].channel)
 
     @commands.command()
-    async def guess(self, ctx: commands.Context, guess: str):
+    async def guess(self, ctx: commands.Context, *guess: str):
         state = self.guilds.get(ctx.guild)
         if not (state and ctx.channel == state.channel) or (datetime.utcnow() - state.last_guess_at).seconds < 3:
             # Second condition prevents accidental simultaneous guesses by multiple players
-            return
-        guess = parse_guess(guess)
-        if not guess or len(guess) != 5 or any(l not in string.ascii_lowercase for l in guess):
-            await ctx.send("Your guess must be 5 letters, a-z only.")
             return
         if state.game_start != current_game_start():
             if state.started() and not state.finished():
@@ -166,7 +267,20 @@ class Wordle(commands.Cog):
         if ctx.author in state.guessers and not os.getenv('SAKUYA_DEBUG'):
             await ctx.send("It's more fun if everyone gets to guess. Please come play again later, though!")
             return
-        if guess not in VALID_GUESSES:
+
+        # Guess parsing
+        if guess and len(guess[0]) == 5:
+            # The first word has the right length for a guess; use that and ignore potential silly jokes after it
+            guess = guess[0]
+        else:
+            # We're receiving the guess as a list to cover cases where Discord inserted spaces between emoji
+            guess = ''.join(guess)
+        try:
+            guess = parse_guess(guess)
+        except GuessLengthError:
+            await ctx.send("Your guess must be 5 letters, a-z only.")
+            return
+        except InvalidGuessError:
             await ctx.send(random.choice(INVALID_GUESS_RESPONSES))
             return
         if guess in state.guesses:
