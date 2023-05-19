@@ -241,27 +241,26 @@ class Wordle(commands.Cog):
     @commands.command()
     async def guess(self, ctx: commands.Context, *guess: str):
         state = self.guilds.get(ctx.guild)
+        overtime = False
         if not (state and ctx.channel == state.channel) or (datetime.now() - state.last_guess_at).seconds < 3:
             # Second condition prevents accidental simultaneous guesses by multiple players
             return
         if state.game_start != current_game_start():
             if state.started() and not state.finished():
-                # Last game wasn't finished before the reset
-                last_word = state.word
-                self.reset(state.guild)
-                await ctx.send(f"Time's up! The word was **{last_word.upper()}**.\nPlease try again.")
-                return
-            if os.getenv('SAKUYA_DEBUG'):
-                state.word = 'debug'
+                overtime = True
             else:
-                state.word = random.choice(WORD_LIST)
-            state.game_start = current_game_start()
-            state.guesses = []
-            state.guessers = set()
+                # Start a new game
+                if os.getenv('SAKUYA_DEBUG'):
+                    state.word = 'debug'
+                else:
+                    state.word = random.choice(WORD_LIST)
+                state.game_start = current_game_start()
+                state.guesses = []
+                state.guessers = set()
         if state.finished():
             await ctx.send(f"I'm preparing for the next game. Come back {time_until_next_game()}!")
             return
-        if ctx.author in state.guessers and not os.getenv('SAKUYA_DEBUG'):
+        if ctx.author in state.guessers and not (overtime or os.getenv('SAKUYA_DEBUG')):
             await ctx.send("It's more fun if everyone gets to guess. Please come play again later, though!")
             return
 
@@ -281,7 +280,7 @@ class Wordle(commands.Cog):
             await ctx.send(random.choice(INVALID_GUESS_RESPONSES))
             return
         if guess in state.guesses:
-            await ctx.send("Someone else already guessed that. Try again.")
+            await ctx.send("Someone already guessed that. Try again.")
             return
 
         # Finally done validating. Process the guess!
@@ -314,11 +313,16 @@ class Wordle(commands.Cog):
                 if guess_count <= BONUS_GAME_THRESHOLD:
                     msg += "\nCare for an extra round? I've got more time to play since you were so quick."
                     self.reset(state.guild)
+                elif overtime:
+                    msg += "\nWould you like to play some more? I've already prepared the next round."
                 else:
                     msg += f"\nNext game ready {time_until_next_game()}."
             case 'lost':
                 msg += f"You lost. The word was **{state.word.upper()}**."
-                msg += f"\nNext game ready {time_until_next_game()}."
+                if overtime:
+                    msg += "\nCare to give it another try? I've got a new word ready for you."
+                else:
+                    msg += f"\nNext game ready {time_until_next_game()}."
             case 'playing':
                 msg += "Available letters:\n"
                 guessed_letters = {letter for guess in state.guesses for letter in guess}
@@ -337,6 +341,8 @@ class Wordle(commands.Cog):
                         msg += letter
                 if highlighting:
                     msg += "**"
+                if overtime:
+                    msg += "\nI'd like to finish this round soon, so feel free to guess multiple times."
         await ctx.send(msg)
 
     async def enable(self, ctx: commands.Context):
