@@ -22,7 +22,11 @@ class GuessSegment:
         return {self.value}
 
     def explode(self) -> set[str]:
-        values = self._aliases.union(*(wordninja.split(a) for a in self._aliases))
+        # Find meaningful substrings within aliases based on capitalisation, underscores, and word frequency analysis
+        values = self._aliases.union(
+            *(re.findall(r'[a-zA-Z][^A-Z_]*', a) for a in self._aliases),
+            *(wordninja.split(a) for a in self._aliases)
+        )
         # Very naively attempt to add singular versions of plural nouns
         # We could use a library, but players probably don't expect e.g. "women" to turn into "woman", so this will do
         values |= {v[:-1] for v in values if v and v[-1] == 's'}
@@ -118,9 +122,15 @@ def parse_guess(guess):
     if not interpretations:
         raise InvalidGuessError
 
-    # Finally, pick the interpretation that's the most specific (determined by word cost)
-    # This means that e.g. the "woman_pilot" emoji gets interpreted as "pilot" rather than "woman"
-    return max(interpretations, key=lambda i: wordninja.DEFAULT_LANGUAGE_MODEL._wordcost.get(i, 999))
+    # Finally, pick the interpretation that we think the player wanted
+    if len(segments) == 1:
+        # If the guess is an emoji, the entire guess is contained within it.
+        # The player most likely wants the most specific word, i.e. "woman_pilot" -> "pilot".
+        return max(interpretations, key=lambda i: wordninja.DEFAULT_LANGUAGE_MODEL._wordcost.get(i, 999))
+    else:
+        # The guess is a combination, so no single emoji contains the whole guess.
+        # The player most likely wants the most obvious word, so avoid picking obscure interpretations.
+        return min(interpretations, key=lambda i: wordninja.DEFAULT_LANGUAGE_MODEL._wordcost.get(i, 999))
 
 
 def emojify_guess(guess, solution):

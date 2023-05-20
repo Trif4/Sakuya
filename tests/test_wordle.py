@@ -17,6 +17,7 @@ from sakuya.wordle.guess import GuessLengthError, parse_guess
     ('🐟<:y_grey:931613702199857243>', 'fishy'),  # emoji + Discord emote
     ('<:lawnmower:927011154868449350>', 'mower'),  # compound word
     ('<:AYAYAWeird:807004237573390428>', 'weird'),  # compound word
+    ('s<:tetriuTea:828458481857593344>m', 'steam'),  # compound word with hinted separation that wordninja fails on
     ('👩‍✈️', 'pilot'),  # two valid words
     ('👍', 'thumb'),  # plural -> singular
     ('<:ThumbsUp:123123124>', 'thumb'),  # also works for Discord emotes
