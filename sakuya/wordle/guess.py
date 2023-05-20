@@ -25,6 +25,7 @@ class GuessSegment:
         # Find meaningful substrings within aliases based on capitalisation, underscores, and word frequency analysis
         values = self._aliases.union(
             *(re.findall(r'[a-zA-Z][^A-Z_]*', a) for a in self._aliases),
+            *(re.findall(r'[A-Z+][^a-z_$]+', a) for a in self._aliases),
             *(wordninja.split(a) for a in self._aliases)
         )
         # Very naively attempt to add singular versions of plural nouns
