@@ -1,6 +1,6 @@
 import pytest
 
-from sakuya.wordle import GuessLengthError, parse_guess
+from sakuya.wordle.guess import GuessLengthError, parse_guess
 
 
 @pytest.mark.parametrize('guess,expected', [
@@ -26,4 +26,8 @@ from sakuya.wordle import GuessLengthError, parse_guess
     ('<:🅰️Y🅰️Y🅰️:12345>', None)  # illegal
 ])
 def test_parse_guess(guess, expected):
-    assert parse_guess(guess) == expected
+    if expected:
+        assert parse_guess(guess) == expected
+    else:
+        with pytest.raises(GuessLengthError):
+            parse_guess(guess)
