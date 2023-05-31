@@ -43,7 +43,9 @@ def current_game_start():
 
 def time_until_next_game():
     next_start = current_game_start() + GAME_TIMEDELTA
-    return discord.utils.format_dt(next_start, 'R')
+    absolute_time = discord.utils.format_dt(next_start, 't')
+    relative_time = discord.utils.format_dt(next_start, 'R')
+    return f'{absolute_time} ({relative_time})'
 
 
 @dataclass
@@ -118,7 +120,7 @@ class Wordle(commands.Cog):
                 state.guesses = []
                 state.guessers = set()
         if state.finished():
-            await ctx.send(f"I'm preparing for the next game. Come back {time_until_next_game()}!")
+            await ctx.send(f"I'm preparing for the next game. Come back at {time_until_next_game()}!")
             return
         if ctx.author in state.guessers and not (overtime or os.getenv('SAKUYA_DEBUG')):
             await ctx.send("It's more fun if everyone gets to guess. Please come play again later, though!")
@@ -176,13 +178,13 @@ class Wordle(commands.Cog):
                 elif overtime:
                     msg += "\nWould you like to play some more? I've already prepared the next round."
                 else:
-                    msg += f"\nNext game ready {time_until_next_game()}."
+                    msg += f"\nNext game will be ready at {time_until_next_game()}."
             case 'lost':
                 msg += f"You lost. The word was **{state.word.upper()}**."
                 if overtime:
                     msg += "\nCare to give it another try? I've got a new word ready for you."
                 else:
-                    msg += f"\nNext game ready {time_until_next_game()}."
+                    msg += f"\nNext game will be ready at {time_until_next_game()}."
             case 'playing':
                 msg += "Available letters:\n"
                 guessed_letters = {letter for guess in state.guesses for letter in guess}
