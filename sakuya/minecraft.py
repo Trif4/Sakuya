@@ -58,7 +58,7 @@ class Minecraft(commands.Cog):
             if not guild:
                 logger.warning(f"Guild {g.id} not found during Minecraft init.")
                 continue
-            channel = guild.get_channel(g.minecraft_channel_id)
+            channel = guild.get_channel_or_thread(g.minecraft_channel_id)
             if not channel:
                 logger.warning(f"Minecraft channel doesn't exist in {guild.name}! Module disabled for guild.")
                 continue

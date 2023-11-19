@@ -47,7 +47,7 @@ class Sentinel(commands.Cog):
             if not guild:
                 logger.warning(f"Guild {g.id} not found during Sentinel init.")
                 continue
-            channel = guild.get_channel(g.sentinel_channel_id)
+            channel = guild.get_channel_or_thread(g.sentinel_channel_id)
             if not channel:
                 logger.warning(f"Alert channel doesn't exist in {guild.name}! Sentinel disabled in guild.")
                 continue
