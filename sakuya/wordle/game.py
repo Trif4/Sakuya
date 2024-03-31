@@ -15,6 +15,7 @@ from .data import WORD_LIST
 from .guess import GuessLengthError, InvalidGuessError, emojify_guess, parse_guess
 
 
+FREE_PLAY = False  # no wait between rounds
 GAMES_PER_DAY = 3
 GAME_TIMEDELTA = timedelta(minutes=1440/GAMES_PER_DAY)
 BONUS_GAME_THRESHOLD = 2
@@ -104,7 +105,7 @@ class Wordle(commands.Cog):
     async def guess(self, ctx: commands.Context, *guess: str):
         state = self.guilds.get(ctx.guild)
         overtime = False
-        if not (state and ctx.channel == state.channel) or (datetime.now() - state.last_guess_at).seconds < 3:
+        if not (state and ctx.channel == state.channel) or (datetime.now() - state.last_guess_at).total_seconds() < 3:
             # Second condition prevents accidental simultaneous guesses by multiple players
             return
         if state.game_start != current_game_start():
@@ -172,7 +173,10 @@ class Wordle(commands.Cog):
                     "You won!",
                     "I was worried I made it too difficult. Good job."
                 ][guess_count-1]
-                if guess_count <= BONUS_GAME_THRESHOLD:
+                if FREE_PLAY:
+                    msg += "\nI've got lots of time today, so play all you want."
+                    self.reset(state.guild)
+                elif guess_count <= BONUS_GAME_THRESHOLD:
                     msg += "\nCare for an extra round? I've got more time to play since you were so quick."
                     self.reset(state.guild)
                 elif overtime:
@@ -181,7 +185,10 @@ class Wordle(commands.Cog):
                     msg += f"\nNext game will be ready at {time_until_next_game()}."
             case 'lost':
                 msg += f"You lost. The word was **{state.word.upper()}**."
-                if overtime:
+                if FREE_PLAY:
+                    msg += "\nI've got lots of time today, so play all you want."
+                    self.reset(state.guild)
+                elif overtime:
                     msg += "\nCare to give it another try? I've got a new word ready for you."
                 else:
                     msg += f"\nNext game will be ready at {time_until_next_game()}."
