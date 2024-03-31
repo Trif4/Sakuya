@@ -123,7 +123,7 @@ class Wordle(commands.Cog):
         if state.finished():
             await ctx.send(f"I'm preparing for the next game. Come back at {time_until_next_game()}!")
             return
-        if ctx.author in state.guessers and not (overtime or os.getenv('SAKUYA_DEBUG')):
+        if ctx.author in state.guessers and not (overtime or FREE_PLAY or os.getenv('SAKUYA_DEBUG')):
             await ctx.send("It's more fun if everyone gets to guess. Please come play again later, though!")
             return
 
