@@ -15,7 +15,7 @@ from .data import WORD_LIST
 from .guess import GuessLengthError, InvalidGuessError, emojify_guess, parse_guess
 
 
-FREE_PLAY = False  # no wait between rounds
+FREE_PLAY = False  # no wait between rounds, multiple guesses per player
 GAMES_PER_DAY = 3
 GAME_TIMEDELTA = timedelta(minutes=1440/GAMES_PER_DAY)
 BONUS_GAME_THRESHOLD = 2
