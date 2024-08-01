@@ -72,6 +72,7 @@ class InvalidGuessError(Exception):
     pass
 
 
+DISCORD_EMOTE_REGEX = re.compile(r'<a?:(\w+):\d+>', re.ASCII)
 # Markdown escapes (backslashes) may occur before any character.
 SHRUG_REGEX = re.compile(''.join(r'\\?' + re.escape(char) for char in r'¯\_(ツ)_/¯'))
 
@@ -97,13 +98,12 @@ def _segmentize_guess(guess: str) -> list[GuessSegment]:
 
     # Now split unprocessed strings into Discord emote segments & string segments
     segments = []
-    discord_emote_regex = re.compile(r'<a?:(\w+):\d+>', re.ASCII)
     for s in segments_partial:
         if isinstance(s, str):
             segments.extend(segmentize(
                 s,
                 [(m.start(), m.end(), DiscordEmoteGuessSegment(m.group(1)))
-                 for m in discord_emote_regex.finditer(s)],
+                 for m in DISCORD_EMOTE_REGEX.finditer(s)],
                 str
             ))
         else:
