@@ -2,6 +2,7 @@ import itertools
 import re
 import string
 from collections import Counter
+from collections.abc import Sequence
 from typing import Type
 
 import emoji
@@ -11,6 +12,8 @@ from .data import LETTER_EMOTES, VALID_GUESSES
 
 
 class GuessSegment:
+    value: str
+
     def __init__(self, value):
         self.value = value
 
@@ -67,7 +70,7 @@ class InvalidGuessError(Exception):
 
 def _segmentize_guess(guess: str) -> list[GuessSegment]:
     def segmentize(
-            text, matches: list[tuple[int, int, GuessSegment]], nonmatch_class: Type[str | StringGuessSegment]
+            text, matches: Sequence[tuple[int, int, GuessSegment]], nonmatch_class: Type[str | StringGuessSegment]
     ) -> list[str | GuessSegment]:
         segments = []
         pos = 0
