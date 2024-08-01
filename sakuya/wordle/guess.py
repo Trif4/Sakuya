@@ -52,6 +52,10 @@ class DiscordEmoteGuessSegment(GuessSegment):
     pass
 
 
+class CustomGuessSegment(GuessSegment):
+    pass
+
+
 class StringGuessSegment(GuessSegment):
     def explode(self) -> set[str]:
         # Regular text in guesses should be left as is
@@ -66,6 +70,10 @@ class GuessLengthError(Exception):
 class InvalidGuessError(Exception):
     """Raised when a guess has the correct length but cannot be found in the valid words dictionary."""
     pass
+
+
+# Markdown escapes (backslashes) may occur before any character.
+SHRUG_REGEX = re.compile(''.join(r'\\?' + re.escape(char) for char in r'¯\_(ツ)_/¯'))
 
 
 def _segmentize_guess(guess: str) -> list[GuessSegment]:
@@ -96,6 +104,20 @@ def _segmentize_guess(guess: str) -> list[GuessSegment]:
                 s,
                 [(m.start(), m.end(), DiscordEmoteGuessSegment(m.group(1)))
                  for m in discord_emote_regex.finditer(s)],
+                str
+            ))
+        else:
+            segments.append(s)
+
+    # Finally, add any custom matches we might have
+    segments_partial = segments
+    segments = []
+    for s in segments_partial:
+        if isinstance(s, str):
+            segments.extend(segmentize(
+                s,
+                [(m.start(), m.end(), CustomGuessSegment('shrug'))
+                 for m in SHRUG_REGEX.finditer(s)],
                 StringGuessSegment
             ))
         else:
