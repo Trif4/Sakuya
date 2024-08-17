@@ -25,7 +25,9 @@ from sakuya.wordle.guess import GuessLengthError, parse_guess
     ('thumbs', None),  # string guesses are not modified
     ('👡', 'woman'),  # no apostrophe
     ('👍🏻', 'thumb'),  # skin tone is less important than main word
-    ('<:🅰️Y🅰️Y🅰️:12345>', None)  # illegal
+    ('<:🅰️Y🅰️Y🅰️:12345>', None),  # illegal
+    (r'¯\_(ツ)_/¯', 'shrug'),  # shrug
+    (r'¯\\\_(ツ)\_/¯', 'shrug'),  # shrug with escaped markdown characters
 ])
 def test_parse_guess(guess, expected):
     if expected:
