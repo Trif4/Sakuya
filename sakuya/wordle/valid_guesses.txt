@@ -3836,6 +3836,7 @@ gyoza
 gypos
 gyppo
 gyppy
+gypsy
 gyral
 gyred
 gyres
